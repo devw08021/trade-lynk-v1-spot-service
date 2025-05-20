@@ -11,10 +11,38 @@
     "rootDir": "src",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@controllers/*": [
+        "src/controllers/*"
+      ],
+      "@middlewear/*": [
+        "src/middlewear/*"
+      ],
+      "@mudoles/*": [
+        "src/mudoles/*"
+      ],
+      "@mudoles/*": [
+        "src/mudoles/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
     },
-    "types": ["bun-types", "node"]
+    "types": [
+      "bun-types",
+      "node"
+    ]
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
-} 
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

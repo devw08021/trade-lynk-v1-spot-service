@@ -11,18 +11,19 @@
     "test": "bun test"
   },
   "dependencies": {
+    "decimal.js": "^10.4.3",
     "hono": "^4.5.0",
-    "mongodb": "^6.5.0",
-    "redis": "^4.6.13",
     "jose": "^5.2.3",
-    "zod": "^3.22.4",
-    "decimal.js": "^10.4.3"
+    "mongodb": "^6.5.0",
+    "mongoose": "^8.15.0",
+    "redis": "^4.6.13",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "bun-types": "latest",
-    "@types/node": "^20.11.25"
+    "@types/node": "^20.11.25",
+    "bun-types": "latest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   }
-} 
+}
