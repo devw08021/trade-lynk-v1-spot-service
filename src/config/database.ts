@@ -1,25 +1,54 @@
+// src/config/database.ts
 import mongoose from 'mongoose';
-import config from './index' ;
+import { env } from './env';
 
-type ConnectionCallback = (status: boolean) => void;
+class Database {
+  private static instance: Database;
+  private isConnected = false;
 
-const dbConnection = (cb: ConnectionCallback): void => {
+  private constructor() {
+    if (!env.MONGODB_URI) {
+      throw new Error('MONGODB_URI is not defined in the environment variables');
+    }
+  }
 
-  mongoose.connect(config.DATABASE_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log('\x1b[33m%s\x1b[0m', 'MongoDB successfully connected.');
-    cb(true);
-  })
-  .catch((err: unknown) => {
-    console.error("-----err", err);
-    console.log("\x1b[31m", 'Error on Database connection');
-    setTimeout(() => {
-      dbConnection(cb);
-    }, 1000);
-  });
-};
+  public static getInstance(): Database {
+    if (!Database.instance) {
+      Database.instance = new Database();
+    }
+    return Database.instance;
+  }
 
-export default dbConnection;
+  public async connect(): Promise<typeof mongoose> {
+    if (this.isConnected) {
+      return mongoose;
+    }
+
+    try {
+      await mongoose.connect(env.MONGODB_URI, {
+        // Optional Mongoose settings
+        dbName: env.MONGODB_DB_NAME || undefined,
+        autoIndex: true,
+      });
+      this.isConnected = true;
+      console.log('Connected to MongoDB with Mongoose');
+      return mongoose;
+    } catch (error) {
+      console.error('Error connecting to MongoDB with Mongoose:', error);
+      throw error;
+    }
+  }
+
+  public async close(): Promise<void> {
+    if (this.isConnected) {
+      await mongoose.disconnect();
+      this.isConnected = false;
+      console.log('MongoDB connection closed');
+    }
+  }
+}
+
+// Exports
+export const db = Database.getInstance();
+export const connect = async (): Promise<typeof mongoose> => await db.connect();
+export const closeDb = async (): Promise<void> => await db.close();

@@ -1,7 +1,7 @@
 {
-  "name": "spot-service",
+  "name": "user-service",
   "version": "1.0.0",
-  "description": "Spot trading service for Trade-Lynk using Bun.js, Hono, MongoDB, and Redis",
+  "description": "User service for Trade-Lynk using Bun.js, Hono, MongoDB, and Redis",
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
@@ -11,15 +11,16 @@
     "test": "bun test"
   },
   "dependencies": {
-    "decimal.js": "^10.4.3",
+    "bcrypt": "^5.1.1",
     "hono": "^4.5.0",
-    "jose": "^5.2.3",
-    "mongodb": "^6.5.0",
+    "ioredis": "^5.6.1",
     "mongoose": "^8.15.0",
-    "redis": "^4.6.13",
+    "mongoose-lean-virtuals": "^2.0.0",
+    "otpauth": "^9.4.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.11.25",
     "bun-types": "latest"
   },

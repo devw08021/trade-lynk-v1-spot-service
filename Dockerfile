@@ -9,9 +9,9 @@ RUN bun install --production
 
 COPY . .
 
-ENV PORT=3002
+ENV PORT=3001
 ENV NODE_ENV=production
 
-EXPOSE 3002
+EXPOSE 3001
 
 CMD ["bun", "run", "start"] 
