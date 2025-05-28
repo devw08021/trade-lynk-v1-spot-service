@@ -3,6 +3,7 @@ import { logger } from "hono/logger";
 import { cors } from "hono/cors";
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
+import adminRoutes from "./routes/adminRoutes";
 import { connect } from "./config/database";
 import { connectRedis, getRedisClient, closeRedis } from "./config/redis";
 import { env } from "./config/env";
@@ -73,7 +74,8 @@ async function bootstrap() {
     // ✅ Routes are only registered after DB is ready
     app.route("/api/auth", authRoutes);
     app.route("/api/user", userRoutes);
-
+    app.route("/api/admin/v1", adminRoutes);
+    
     // not found handler
     app.notFound((c) => {
       return c.json({ success: false, message: "Not Found" }, 404);

@@ -2,7 +2,7 @@ import { UserController } from "./userController";
 import { TwoFaController } from "./2FaController";
 import { AuthController } from "./authController";
 import { UserSettingsController } from "./UserSettingsController";
-
+import { PairController } from "./admin/pair";
 
 
 
@@ -16,5 +16,6 @@ export {
     TwoFaController,
     AuthController,
     ValidationController,
-    UserSettingsController
+    UserSettingsController,
+    PairController
 };

@@ -1,7 +1,6 @@
 // src/config/database.ts
 import mongoose from 'mongoose';
 import { env } from './env';
-
 class Database {
   private static instance: Database;
   private isConnected = false;
@@ -26,8 +25,6 @@ class Database {
 
     try {
       await mongoose.connect(env.MONGODB_URI, {
-        // Optional Mongoose settings
-        dbName: env.MONGODB_DB_NAME || undefined,
         autoIndex: true,
       });
       this.isConnected = true;

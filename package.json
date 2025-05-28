@@ -5,13 +5,14 @@
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
+    "dev": "dotenvx run --env-file src/.env.local -- bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --outdir dist",
     "test": "bun test"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "@dotenvx/dotenvx": "^1.43.0",
     "hono": "^4.5.0",
     "ioredis": "^5.6.1",
     "mongoose": "^8.15.0",
