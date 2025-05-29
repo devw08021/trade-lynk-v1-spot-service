@@ -72,9 +72,34 @@ class RedisClient {
       }
     });
   }
+
+  public async hset(key: string, field: string, value: string): Promise<number> {
+    const client = this.getClient();
+    return await client.hset(key, field, value);
+  }
+
+  public async hget(key: string, field: string): Promise<string | null> {
+    const client = this.getClient();
+    return await client.hget(key, field);
+  }
+
+  public async hdel(key: string, field: string): Promise<number> {
+    const client = this.getClient();
+    return await client.hdel(key, field);
+  }
 }
 
 export const redis = RedisClient.getInstance();
 export const connectRedis = async (): Promise<void> => await redis.connect();
 export const getRedisClient = (): Redis => redis.getClient();
 export const closeRedis = async (): Promise<void> => await redis.close();
+
+
+export const hsetField = async (key: string, field: string, value: string): Promise<number> =>
+  await redis.hset(key, field, value);
+
+export const hgetField = async (key: string, field: string): Promise<string | null> =>
+  await redis.hget(key, field);
+
+export const hdelField = async (key: string, field: string): Promise<number> =>
+  await redis.hdel(key, field);

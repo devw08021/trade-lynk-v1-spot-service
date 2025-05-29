@@ -16,7 +16,7 @@ export interface PairInt {
   makerFee?: number;
   takerFee?: number;
   last?:number;
-  markPrice?:number;
+  marketPrice?:number;
   low?:number;
   high?:number;
   baseVolume?:number;

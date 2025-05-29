@@ -17,7 +17,7 @@ const PairSchema = new Schema < PairInterface & Document > (
         makerFee: { type: Number, default: 0 },
         takerFee: { type: Number, default: 0 },
         last: { type: Number, default: 0 },
-        markPrice: { type: Number, required: true },
+        marketPrice: { type: Number, required: true },
         low: { type: Number, default: 0 },
         high: { type: Number, default: 0 },
         baseVolume: { type: Number, default: 0 },
