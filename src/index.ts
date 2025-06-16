@@ -32,7 +32,7 @@ async function bootstrap() {
 
     // 2. Connect to Redis
     await connectRedis();
-
+    require('./config/cron')
     // 3. Redis Subscriber Setup (Optional)
     try {
       const redisClient = getRedisClient(); // Now safe
@@ -72,9 +72,7 @@ async function bootstrap() {
     });
 
     // ✅ Routes are only registered after DB is ready
-    app.route("/api/auth", authRoutes);
-    app.route("/api/user", userRoutes);
-    app.route("/api/admin/v1", adminRoutes);
+    app.route("/api/admin", adminRoutes);
     
     // not found handler
     app.notFound((c) => {
