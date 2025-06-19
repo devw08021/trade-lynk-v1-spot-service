@@ -1,0 +1,35 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/wealwindev/raja/finowiz/dev1/logs/error/.bc9dc602ed281fa217154250104a92cbe98dff22-audit.json",
+    "files": [
+        {
+            "date": 1749796947388,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/error/13-06-2025.log",
+            "hash": "93c027e42d0dd1d844f2d449ad1b4980a78a7b2e9c543c8f59799ddd6b95270b"
+        },
+        {
+            "date": 1750055708068,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/error/16-06-2025.log",
+            "hash": "010b0b97304ce6b1c298b4b2c23006f3c3bfe936d6e04d65f815e25a98d685da"
+        },
+        {
+            "date": 1750134492076,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/error/17-06-2025.log",
+            "hash": "5abaefd60ba0cfb5b99a2ea4d83bb09b95bb01e08f178db007e838e60eea3330"
+        },
+        {
+            "date": 1750221709940,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/error/18-06-2025.log",
+            "hash": "08e0de1b386c7428046d1706c9a758f75a15c6e19439f32c169c38ac1b808b51"
+        },
+        {
+            "date": 1750308240660,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/error/19-06-2025.log",
+            "hash": "61fb0cfbb996c897afc13c21fc5c9c5aac73ba38d96cfcd3749aac75273182a8"
+        }
+    ],
+    "hashType": "sha256"
+}

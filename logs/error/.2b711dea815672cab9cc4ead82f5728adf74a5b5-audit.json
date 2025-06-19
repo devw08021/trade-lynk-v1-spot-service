@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/wealwindev/raja/finowiz/spot/logs/error/.2b711dea815672cab9cc4ead82f5728adf74a5b5-audit.json",
+    "files": [
+        {
+            "date": 1750324791486,
+            "name": "/Users/wealwindev/raja/finowiz/spot/logs/error/19-06-2025.log",
+            "hash": "eaa696393e63453103b8c6ba31acce26a9ab554e0e23ecf3dab39db4179551b4"
+        }
+    ],
+    "hashType": "sha256"
+}

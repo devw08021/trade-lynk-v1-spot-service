@@ -1,0 +1,5 @@
+{"data":{"leverage":"100","loginId":"2385"},"error":{"data":{"retcode":"3 Invalid parameters"},"status":true},"level":"error","message":"updateLeverage","timestamp":"2025-06-13T06:47:56.380Z"}
+{"data":{"leverage":"100","loginId":"2385"},"error":{"data":{"retcode":"3 Invalid parameters"},"status":true},"level":"warn","message":"updateLeverage","timestamp":"2025-06-13T06:49:47.633Z"}
+{"data":{"leverage":"100","loginId":"2385"},"error":"isEmptya is not defined","level":"error","message":"updateLeverage","timestamp":"2025-06-13T06:52:24.305Z"}
+{"data":{"leverage":"100","loginId":"2385"},"error":"isEmptya is not defined","level":"error","message":"updateLeverage","timestamp":"2025-06-13T06:54:51.929Z"}
+{"data":{"leverage":"100","loginId":"2385"},"error":"isEmptya is not defined","level":"error","message":"updateLeverage","timestamp":"2025-06-13T06:55:25.433Z"}

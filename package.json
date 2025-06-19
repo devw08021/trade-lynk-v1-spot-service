@@ -1,31 +1,40 @@
 {
-  "name": "user-service",
+  "name": "hesperwealth",
   "version": "1.0.0",
-  "description": "User service for Trade-Lynk using Bun.js, Hono, MongoDB, and Redis",
-  "module": "src/index.ts",
-  "type": "module",
+  "description": "",
+  "module": "src/server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "dotenvx run --env-file src/.env.local -- bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist",
-    "test": "bun test"
+    "build": "npm run build:env && npm run build:copy",
+    "build:env": "node src/esbuild.config.js --env=local",
+    "build:dev": "node src/esbuild.config.js --env=dev",
+    "build:prod": "node src/esbuild.config.js --env=prod",
+    "build:copy": "mkdir -p ../build/src/config ../build/src/chart && cp src/config/pub.pem ../build/src/config/ && cp -R src/chart ../build/src/ && cp -R src/ecosystem.config.js node_modules ../build/",
+    "dev": "node dist/server.js",
+    "start": "node src/script.js"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "@babel/runtime": "^7.27.6",
     "@dotenvx/dotenvx": "^1.43.0",
-    "hono": "^4.5.0",
+    "@hono/node-server": "^1.14.3",
+    "axios": "^1.2.0",
+    "bcrypt": "^5.1.1",
+    "crypto-js": "^4.2.0",
+    "hono": "^4.7.11",
     "ioredis": "^5.6.1",
+    "moment-timezone": "^0.6.0",
     "mongoose": "^8.15.0",
-    "mongoose-lean-virtuals": "^2.0.0",
-    "otpauth": "^9.4.0",
-    "zod": "^3.22.4"
+    "node-cron": "^4.1.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "@types/node": "^20.11.25",
-    "bun-types": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "@babel/core": "^7.20.2",
+    "@babel/plugin-transform-runtime": "^7.19.6",
+    "@babel/preset-env": "^7.20.2",
+    "@babel/register": "^7.18.9",
+    "esbuild": "^0.25.5"
   }
 }

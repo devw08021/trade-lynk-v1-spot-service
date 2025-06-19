@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/wealwindev/raja/finowiz/spot/logs/mt5/.d1561a62bbcbd7223497b048654a20fabb52c3ce-audit.json",
+    "files": [
+        {
+            "date": 1750324791501,
+            "name": "/Users/wealwindev/raja/finowiz/spot/logs/mt5/19-06-2025.log",
+            "hash": "eb76b5a31c38b2c1bcd34c1c0922a5a2f93705a4073ab7809fa640eb9ed307c3"
+        }
+    ],
+    "hashType": "sha256"
+}

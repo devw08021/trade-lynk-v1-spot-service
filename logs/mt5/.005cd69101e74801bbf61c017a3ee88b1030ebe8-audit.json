@@ -1,0 +1,35 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/.005cd69101e74801bbf61c017a3ee88b1030ebe8-audit.json",
+    "files": [
+        {
+            "date": 1749796947398,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/13-06-2025.log",
+            "hash": "22441b05a5984de396677e729f0f724f0e6575714201e7c6b163857a998d8dfc"
+        },
+        {
+            "date": 1750055708087,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/16-06-2025.log",
+            "hash": "6284088997796d6ec7007966bba3941601fdd2d6358b6100a7f783932a61eb3b"
+        },
+        {
+            "date": 1750134492094,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/17-06-2025.log",
+            "hash": "cb0fdbd367ec4d2b0d2aec836257ac0e448147909556dd51e1e59f99c6e74c57"
+        },
+        {
+            "date": 1750221709959,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/18-06-2025.log",
+            "hash": "000532fc42b6db4d73f5cae0e21b7ba700d23192ebab2219568a106a7e4fe5eb"
+        },
+        {
+            "date": 1750308240676,
+            "name": "/Users/wealwindev/raja/finowiz/dev1/logs/mt5/19-06-2025.log",
+            "hash": "c0779198a10ec57acec4390ab770d9b2cd2e513528b4ec6dd3078245002769b1"
+        }
+    ],
+    "hashType": "sha256"
+}
