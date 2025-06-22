@@ -34,11 +34,11 @@ process.on("SIGTERM", shutdown);
 
 async function bootstrap() {
   try {
-    //  Connect to DB
-    connect();
+
     //  Connect to Redis
-    connectRedis();
-    //Connect to MT5
+    await connectRedis();
+    //  Connect to DB
+    await connect();
     //  Only now initialize Hono app
     app = new Hono();
     app.use("*", validateJsonBody);
@@ -88,31 +88,7 @@ async function bootstrap() {
       }
     })
 
-    app.get('/chart/*', async (c) => {
-      const filePath = path.join(process.cwd(), 'src', c.req.path)
-      if (!existsSync(filePath)) {
-        return c.text('File not found', 404)
-      }
-      const fileBuffer = await fs.readFile(filePath)
 
-      return c.html(fileBuffer);
-    })
-
-    app.get('/charting_library/*', async (c) => {
-      const filePath = path.join(process.cwd(), 'src/chart', c.req.path)
-
-      if (!existsSync(filePath)) {
-        return c.text('File not found', 404)
-      }
-      const fileBuffer = await fs.readFile(filePath)
-      const contentType = getContentType(filePath) || 'application/octet-stream'
-      return new Response(fileBuffer, {
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=3600',
-        },
-      })
-    })
     // Error handler
     app.onError((err, c) => {
       console.log('err: ', err);

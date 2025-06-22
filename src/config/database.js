@@ -36,6 +36,7 @@ class Database {
       });
       this.isConnected = true; ``
       console.log('✅ Connected to MongoDB with Mongoose');
+      require('../config/cron.js')
       return mongoose;
     } catch (error) {
       console.error('Error connecting to MongoDB with Mongoose:', error);

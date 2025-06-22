@@ -103,6 +103,13 @@ class RedisClient {
   async set(key, data) {
     return await this.getClient().set(key, JSON.stringify(data));
   }
+  async hincrByFloat(key, field, increment) {
+    return await this.getClient().hincrbyfloat(key, field, increment);
+  }
+  async hincrBy(key, field, increment) {
+    return await this.getClient().hincrby(key, field, increment);
+  }
+
 }
 
 // Singleton + wrappers
@@ -133,7 +140,15 @@ const hsetMulti = async (key, data) => {
 const hgetField = async (key, field) => JSON.parse(await redis.hget(key, String(field)));
 const get = async (key) => JSON.parse(await redis.get(key));
 const set = async (key, value) => await redis.set(key, value);
-const hgetAll = async (key) => await redis.hgetAll(key);
+const hgetAll = async (key) => {
+  let arr = []
+  let data = await redis.hgetAll(key);
+  var keys = Object.values(data);
+  for (var i = 0; i < keys.length; i++) {
+    arr.push(JSON.parse(str))
+  }
+  return arr
+}
 const hmgetFields = async (key, ...fields) => await redis.hmget(key, ...fields);
 const hdelField = async (key, field) => await redis.hdel(key, field);
 const hgetMulti = async (hash, field) => {
@@ -153,7 +168,8 @@ const hgetMulti = async (hash, field) => {
 const sadd = async (key, ...members) => await redis.sadd(key, ...members);
 const sget = async (key) => await redis.smembers(key);
 const sremove = async (key, ...members) => await redis.srem(key, ...members);
-
+const hicByFloat = async (key, field, increment) => await redis.hincrByFloat(key, field, increment);
+const hIncBy = async (key, field, increment) => await redis.hincrBy(key, field, increment);
 export {
   redis,
   connectRedis,
@@ -169,5 +185,7 @@ export {
   sadd,
   sget,
   sremove,
-  hgetMulti
+  hgetMulti,
+  hicByFloat,
+  hIncBy
 };
