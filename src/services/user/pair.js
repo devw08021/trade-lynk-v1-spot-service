@@ -2,7 +2,7 @@ import {
     PairModel
 } from "../../models/schema/index.js";
 import { getRepository } from "../../models/repositoryFactory.js";
-
+import { hsetField } from '../../config/redis.js'
 
 
 export class PairService {
@@ -11,6 +11,16 @@ export class PairService {
 
     }
 
-    async getSymbols(data) { }
+    async setPairsDBtoRedis() {
+        try {
+            let pairs = await this.pairRepo.find({ status: 'active' })
+            if (!pairs) return
+            for (let elem of pairs) {
+                await hsetField('sPairs', elem._id, elem)
+            }
+        } catch (err) {
+            console.log('err:setPairsDBtoRedis ', err);
+        }
+    }
 
 }

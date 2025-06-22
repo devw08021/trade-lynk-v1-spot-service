@@ -119,24 +119,6 @@ const connectRedis = async () => await redis.connect();
 const closeRedis = async () => await redis.close();
 
 const hsetField = async (key, field, value) => await redis.hset(key, field, value);
-const hsetMulti = async (key, data) => {
-  try {
-    const multi = redis.getClient().multi();
-
-    field.forEach(item => {
-      const key = hash === 'mtAccount' ? item?.loginId?.toString() : item?._id?.toString();
-      if (key) {
-        multi.hset(hash, key, JSON.stringify(item));
-      }
-    });
-
-    const replies = await multi.exec();
-    return replies;
-  } catch (err) {
-    console.error('Error performing bulk HSET:', err);
-    return null;
-  }
-};
 const hgetField = async (key, field) => JSON.parse(await redis.hget(key, String(field)));
 const get = async (key) => JSON.parse(await redis.get(key));
 const set = async (key, value) => await redis.set(key, value);
@@ -175,7 +157,6 @@ export {
   connectRedis,
   closeRedis,
   hsetField,
-  hsetMulti,
   hgetField,
   hgetAll,
   hmgetFields,
