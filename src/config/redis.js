@@ -1,7 +1,5 @@
-// src/config/redis.js
 import IORedis from 'ioredis';
 
-// Update this if needed
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 class RedisClient {

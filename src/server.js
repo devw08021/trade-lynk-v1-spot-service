@@ -1,4 +1,3 @@
-// server-node.js
 import { serve } from '@hono/node-server';
 import app from './index.js';
 import { connectSocketIO } from './config/socketIO.js'
@@ -15,7 +14,6 @@ let server = serve({
     fetch: app.fetch,
     port,
 });
-//Connect to socket
 connectSocketIO(server)
 
-console.log(`🦸‍♂️💨 Superman is flying to http://localhost:${port}`);
+console.log(`🦸 http://localhost:${port}`);

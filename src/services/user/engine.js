@@ -7,7 +7,7 @@ const pairRepo = getRepository(PairModel)
 
 export const runEngine = async () => {
     let pairData;
-    const sPairs = await hgetAll('sPairs')
+    const sPairs = await hgetAll('spotPairdata')
     if (sPairs) {
         pairData = sPairs;
     } else {

@@ -1,5 +1,5 @@
 {
-  "name": "hesperwealth",
+  "name": "spot",
   "version": "1.0.0",
   "description": "",
   "module": "src/server.js",
@@ -16,6 +16,8 @@
   "dependencies": {
     "@babel/runtime": "^7.27.6",
     "@dotenvx/dotenvx": "^1.43.0",
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.8.0",
     "@hono/node-server": "^1.14.3",
     "axios": "^1.2.0",
     "bcrypt": "^5.1.1",

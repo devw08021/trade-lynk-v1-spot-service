@@ -1,5 +1,3 @@
-// src/validators/ValidationController.js
-
 class ValidationController {
   static regex = {
     onlyString: /^[a-zA-Z\s]+$/,
