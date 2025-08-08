@@ -8,6 +8,13 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV,
   SECRET_KEY: process.env.SECRET_KEY,
   BASE_URL: process.env.BASE_URL,
+  GRPC:{
+    CURRENT_PORT:process.env.CURRENT_PORT,
+    SPOT_PORT:process.env.SPOT_PORT,
+    WALLET_PORT:process.env.WALLET_PORT,
+    USER_PORT:process.env.USER_PORT,
+    DERIVATIVE_PORT:process.env.DERIVATIVE_PORT
+  },
   IMG_PATH: {
     KYC: '/uploads/kyc',
     TRANSACTION: '/uploads/transaction',
