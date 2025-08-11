@@ -1,316 +1,335 @@
-export const updateOrderBook = async (newOrder, pairId, firstFloatDigit) => {
-  try {
-    let decimalval = minTwoDigits(firstFloatDigit);
-    let quntitydecimal = newOrder.quantity * decimalval;
-    console.log(newOrder, "---------1089");
-    await hincby(
-      newOrder.buyorsell + "Orders" + pairId,
-      newOrder.price,
-      quntitydecimal
-    );
-    console.log(
-      "--------------------------1095",
-      newOrder.buyorsell + "Orders" + pairId,
-      newOrder.price,
-      quntitydecimal
-    );
-    getOrderBookSocket(pairId);
-    return true;
-  } catch (err) {
-    console.log(err, "------1099");
-    return false;
-  }
-};
-export const newOrderHistory = async (orderData) => {
-  try {
-    let adminLiq = await hget("admin_liquidity", "liquidation");
-    adminLiq = JSON.parse(adminLiq);
-    console.log(orderData, "-------1135");
-    let orderHistoryDetails = {
-      _id: orderData._id,
-      userId: orderData.userId,
-      pairId: orderData.pairId,
-      firstCurrencyId: orderData.firstCurrencyId,
-      firstCurrency: orderData.firstCurrency,
-      firstFloatDigit: orderData.firstFloatDigit,
-      secondCurrencyId: orderData.secondCurrencyId,
-      secondCurrency: orderData.secondCurrency,
-      secondFloatDigit: orderData.secondFloatDigit,
-      makerFee: orderData.makerFee,
-      takerFee: orderData.takerFee,
-      quantity:
-        orderData.orderType == "market" ? orderData.amount : orderData.quantity,
-      price:
-        adminLiq._id.toString() == orderData.userId.toString()
-          ? orderData.price
-          : orderData.orderType == "market"
-          ? orderData.orderValue
-          : orderData.price,
-      orderValue: orderData.orderValue,
-      pairName: orderData.pairName,
-      orderType: orderData.orderType,
-      buyorsell: orderData.buyorsell,
-      openQuantity: orderData.openQuantity,
-      averagePrice: orderData.averagePrice,
-      openOrderValue: orderData.openOrderValue,
-      filledQuantity: orderData.filledQuantity,
-      flag: orderData.flag,
-      status: orderData.status,
-      orderDate: orderData.orderDate,
-      liquidityType: orderData.liquidityType,
-      liquidityId: orderData.liquidityId,
-      isLiquidityError: orderData.isLiquidityError,
-      isLiquidity: orderData.isLiquidity,
-      updatedAt: Date.now(),
-      orderDate: orderData.orderDate,
-      userCode: orderData.userCode,
+// src/controllers/user/trade.service.js
+import {
+  hIncBy,
+  hgetField,
+  hicByFloat,
+  hmgetFields,
+  hsetField,
+} from "@/config/redis";
+import { saveAdminprofit } from "@/grpc/services/adminService";
+import { getRepository } from "@/models/repositoryFactory";
+import { PairModel, SpotOrder, TradesModel } from "@/models/schema";
+
+export default class TradeService {
+  constructor(deps = {}) {
+    this.redis = {
+      hIncBy,
+      hicByFloat,
+      hsetField,
+      hgetField,
+      hmgetFields,
     };
-    SpotOrder.findOneAndUpdate(
-      { _id: orderData._id },
-      {
-        $set: orderHistoryDetails,
-        $setOnInsert: { orderCode: orderData?.orderCode },
-      },
-      { upsert: true }
-    )
-      .exec()
-      .then(() => {})
-      .catch((err) => {
-        console.log(err);
-      });
-    return true;
-  } catch (err) {
-    console.log("err on newOrderHistory---", err);
-  }
-};
 
+    // Models
+    this.spotOrderRepo = getRepository(SpotOrder);
+    this.pairRepo = getRepository(PairModel);
+    this.tradeHistoryRepo = getRepository(TradesModel);
 
-export const newTradeHistory = async ({
-  buyOrderData,
-  sellOrderData,
-  uniqueId,
-  execPrice,
-  Maker,
-  buyerFee,
-  sellerFee,
-  execQuantity,
-  ordertype,
-  buyerFeeCurrency,
-  buyerFeeCurrencyId,
-  buyerOrgFee,
-  buyerFeeExcRate,
-  sellerFeeCurrency,
-  sellerFeeCurrencyId,
-  sellerOrgFee,
-  sellerFeeExcRate,
-}) => {
-  console.log(buyOrderData, "---buyOrderData");
-  console.log(sellOrderData, "---sellOrderData");
-  console.log(buyerFee, "buyerFee");
-  console.log(sellerFee, "sellerFee");
-  try {
-    let PairId = buyOrderData.pairId
-      ? buyOrderData.pairId
-      : sellOrderData.pairId;
-    let firsrCurrency = buyOrderData.firstCurrency
-      ? buyOrderData.firstCurrency
-      : sellOrderData.firstCurrency;
-    let secondCurrecny = buyOrderData.secondCurrency
-      ? buyOrderData.secondCurrency
-      : sellOrderData.secondCurrency;
-    let PairSymbole = firsrCurrency + secondCurrecny;
-    let data = {
-      pairId: PairId,
-      firstCurrency: firsrCurrency,
-      secondCurrency: secondCurrecny,
-      firstCurrencyId: buyOrderData.firstCurrencyId
-        ? buyOrderData.firstCurrencyId
-        : sellOrderData.firstCurrencyId,
-      secondCurrencyId: buyOrderData.secondCurrencyId
-        ? buyOrderData.secondCurrencyId
-        : sellOrderData.secondCurrencyId,
-      sellUserId: sellOrderData.userId,
-      buyUserId: buyOrderData.userId,
-      uniqueId: uniqueId,
-      tradePrice: execPrice,
-      tradeQty: execQuantity,
-      buyUserCode: buyOrderData.userCode ? buyOrderData.userCode : "",
-      sellUserCode: sellOrderData.userCode ? sellOrderData.userCode : "",
-      buyeOrderPrice: parseFloat(
-        !isEmpty(buyOrderData.price) && buyOrderData.price != "market"
-          ? buyOrderData.price
-          : 0
-      ),
-      sellerOrderPrice: parseFloat(
-        !isEmpty(sellOrderData) && sellOrderData.price != "market"
-          ? sellOrderData.price
-          : 0
-      ),
-      buyerFee: buyerFee.toString(),
-      sellOrderType: sellOrderData.orderType
-        ? sellOrderData.orderType
-        : "Liquidity",
-      buyOrderType: buyOrderData.orderType
-        ? buyOrderData.orderType
-        : "Liquidity",
-      sellerFee: sellerFee.toString(),
-      isMaker: Maker,
-      status: "completed",
-      createdAt: Date.now(),
-      orderValue: execPrice * execQuantity,
-      pairName: PairSymbole,
-      buyOrderId: buyOrderData._id ? buyOrderData._id : PairId,
-      sellOrderId: sellOrderData._id ? sellOrderData._id : PairId,
-      buyOrdCode: buyOrderData?.orderCode,
-      sellOrdCode: sellOrderData?.orderCode,
-      buyerFeeCurrency,
-      buyerFeeCurrencyId,
-      buyerOrgFee,
-      buyerFeeExcRate,
-      sellerFeeCurrency,
-      sellerFeeCurrencyId,
-      sellerFeeExcRate,
-      sellerOrgFee,
+    this.minTwoDigits =
+      deps.minTwoDigits || ((n) => Math.pow(10, Number(n) || 0));
+    this.isEmpty = deps.isEmpty || ((v) => v === undefined || v === null);
+    this.setDepthHist = deps.setDepthHist || (() => {});
+    this.editOrderBook = deps.editOrderBook || (() => {});
+    this.passbook = deps.passbook || (() => {});
+
+    this.sockets = {
+      getOrderBookSocket: deps.getOrderBookSocket || (() => {}),
+      getTradeHistorySocket: deps.getTradeHistorySocket || (() => {}),
+      recentTradeSocket: deps.recentTradeSocket || (() => {}),
+      marketPriceSocket: deps.marketPriceSocket || (() => {}),
     };
-    console.log(data, "TradeHistory");
-    let newCompletedTrade = new TradeHistory(data);
-    await newCompletedTrade.save();
+  }
 
-    if (!isEmpty(buyOrderData)) {
-      const [isAff] = await hmget(
-        "userSetting_" + buyOrderData.userId.toString(),
-        ["isAff"]
+  async updateOrderBook(newOrder, pairId, firstFloatDigit) {
+    try {
+      const decimalval = this.minTwoDigits(firstFloatDigit);
+      const quantityDecimal = Number(newOrder.quantity) * Number(decimalval);
+
+      await this.redis.hIncBy(
+        `${newOrder.buyorsell}Orders${pairId}`,
+        String(newOrder.price),
+        quantityDecimal
       );
-      if (isAff == "true") {
-        distributeBrokerage({
-          refereeId: buyOrderData.userId,
-          orderId: buyOrderData._id ? buyOrderData._id : PairId,
-          currencyId: buyerFeeCurrencyId,
-          amount: newCompletedTrade.buyerFee,
+
+      getOrderBookSocket(pairId);
+      return true;
+    } catch (err) {
+      console.log("updateOrderBook error:", err);
+      return false;
+    }
+  }
+
+  // order upsert equivalent
+  async newOrderHistory(orderData) {
+    try {
+      // Note: hgetField returns parsed JSON from redis.js
+      let adminLiq = await this.redis.hgetField(
+        "admin_liquidity",
+        "liquidation"
+      );
+
+      const orderHistoryDetails = {
+        _id: orderData._id,
+        userId: orderData.userId,
+        pairId: orderData.pairId,
+        firstCurrencyId: orderData.firstCurrencyId,
+        firstCurrency: orderData.firstCurrency,
+        firstFloatDigit: orderData.firstFloatDigit,
+        secondCurrencyId: orderData.secondCurrencyId,
+        secondCurrency: orderData.secondCurrency,
+        secondFloatDigit: orderData.secondFloatDigit,
+        makerFee: orderData.makerFee,
+        takerFee: orderData.takerFee,
+        quantity:
+          orderData.orderType === "market"
+            ? orderData.amount
+            : orderData.quantity,
+        price:
+          adminLiq &&
+          adminLiq._id?.toString?.() === orderData.userId?.toString?.()
+            ? orderData.price
+            : orderData.orderType === "market"
+            ? orderData.orderValue
+            : orderData.price,
+        orderValue: orderData.orderValue,
+        pairName: orderData.pairName,
+        orderType: orderData.orderType,
+        buyorsell: orderData.buyorsell,
+        openQuantity: orderData.openQuantity,
+        averagePrice: orderData.averagePrice,
+        openOrderValue: orderData.openOrderValue,
+        filledQuantity: orderData.filledQuantity,
+        flag: orderData.flag,
+        status: orderData.status,
+        orderDate: orderData.orderDate,
+        liquidityType: orderData.liquidityType,
+        liquidityId: orderData.liquidityId,
+        isLiquidityError: orderData.isLiquidityError,
+        isLiquidity: orderData.isLiquidity,
+        updatedAt: Date.now(),
+        userCode: orderData.userCode,
+      };
+
+      await this.spotOrderRepo
+        .findOneAndUpdate(
+          { _id: orderData._id },
+          {
+            $set: orderHistoryDetails,
+            $setOnInsert: { orderCode: orderData?.orderCode },
+          },
+          { upsert: true }
+        )
+        .exec();
+
+      return true;
+    } catch (err) {
+      console.log("newOrderHistory error:", err);
+      return false;
+    }
+  }
+
+  // trade completion equivalent (mapped to current trades schema)
+  async newTradeHistory({
+    buyOrderData,
+    sellOrderData,
+    uniqueId,
+    execPrice,
+    Maker,
+    buyerFee,
+    sellerFee,
+    execQuantity,
+    ordertype,
+    buyerFeeCurrency,
+    buyerFeeCurrencyId,
+    buyerOrgFee,
+    buyerFeeExcRate,
+    sellerFeeCurrency,
+    sellerFeeCurrencyId,
+    sellerOrgFee,
+    sellerFeeExcRate,
+  }) {
+    try {
+      const PairId = buyOrderData?.pairId || sellOrderData?.pairId;
+      const baseSymbol =
+        buyOrderData?.firstCurrency || sellOrderData?.firstCurrency || "";
+      const quoteSymbol =
+        buyOrderData?.secondCurrency || sellOrderData?.secondCurrency || "";
+
+      const payload = {
+        pairId: PairId,
+        baseSymbol,
+        quoteSymbol,
+        baseId: buyOrderData?.firstCurrencyId || sellOrderData?.firstCurrencyId,
+        quoteId:
+          buyOrderData?.secondCurrencyId || sellOrderData?.secondCurrencyId,
+        buyerId: buyOrderData?.userId,
+        sellerId: sellOrderData?.userId,
+        buyOrderId: buyOrderData?._id || PairId,
+        sellOrderId: sellOrderData?._id || PairId,
+        buyerCode: buyOrderData?.userCode || "",
+        sellerCode: sellOrderData?.userCode || "",
+        buyerPrice: parseFloat(
+          buyOrderData?.price && buyOrderData?.price !== "market"
+            ? buyOrderData.price
+            : 0
+        ),
+        sellerPrice: parseFloat(
+          sellOrderData?.price && sellOrderData?.price !== "market"
+            ? sellOrderData.price
+            : 0
+        ),
+        buyerFee: Number(buyerFee || 0),
+        sellerFee: Number(sellerFee || 0),
+        sellOrderType: sellOrderData?.orderType || "Liquidity",
+        buyOrderType: buyOrderData?.orderType || "Liquidity",
+        isMaker: String(!!Maker), // schema expects String
+        tradePrice: Number(execPrice),
+        tradeQty: Number(execQuantity),
+        tradeOrderValue: Number(execPrice) * Number(execQuantity),
+        status: "completed",
+        liquidity: ordertype || "",
+
+        // Not in schema but kept here for clarity; Mongoose will ignore if strict
+        // buyerFeeCurrency, buyerFeeCurrencyId, buyerOrgFee, buyerFeeExcRate,
+        // sellerFeeCurrency, sellerFeeCurrencyId, sellerOrgFee, sellerFeeExcRate,
+        // uniqueId
+      };
+
+      const newCompletedTrade = await new this.tradeHistoryRepo(payload).save();
+
+      // Buyer side post-processing
+      if (!this.isEmpty(buyOrderData)) {
+        const [isAff] = await this.redis.hmgetFields(
+          `userSetting_${String(buyOrderData.userId)}`,
+          "isAff"
+        );
+        // if (isAff === "true") {
+        //   this.distributeBrokerage({
+        //     refereeId: buyOrderData.userId,
+        //     orderId: buyOrderData._id || PairId,
+        //     currencyId: buyerFeeCurrencyId,
+        //     amount: newCompletedTrade.buyerFee,
+        //   });
+        // }
+
+        // this.updateSTV({
+        //   userId: buyOrderData.userId,
+        //   amount: execQuantity,
+        //   currencyId: buyOrderData.firstCurrencyId,
+        // });
+
+        saveAdminprofit({
+          userId: newCompletedTrade.buyerId,
+          ordertype: newCompletedTrade.buyOrderType,
+          pair: `${baseSymbol}/${quoteSymbol}`,
+          fee: newCompletedTrade.buyerFee,
+          coin: baseSymbol,
         });
       }
 
-      updateSTV({
-        userId: buyOrderData.userId,
-        amount: execQuantity,
-        currencyId: buyOrderData.firstCurrencyId,
-      });
+      // Seller side post-processing
+      if (!this.isEmpty(sellOrderData)) {
+        const [isAff] = await this.redis.hmgetFields(
+          `userSetting_${String(sellOrderData.userId)}`,
+          "isAff"
+        );
+        // if (isAff === "true") {
+        //   this.distributeBrokerage({
+        //     refereeId: sellOrderData.userId,
+        //     orderId: sellOrderData._id || PairId,
+        //     currencyId: sellerFeeCurrencyId,
+        //     amount: newCompletedTrade.sellerFee,
+        //   });
+        // }
 
-      saveAdminprofit({
-        userId: newCompletedTrade.buyUserId,
-        ordertype: newCompletedTrade.buyOrderType,
-        pair:
-          newCompletedTrade.firstCurrency +
-          "/" +
-          newCompletedTrade.secondCurrency,
-        fee: newCompletedTrade.buyerFee,
-        coin: newCompletedTrade.firstCurrency,
-      });
-    }
-    if (!isEmpty(sellOrderData)) {
-      const [isAff] = await hmget(
-        "userSetting_" + sellOrderData.userId.toString(),
-        ["isAff"]
-      );
-      if (isAff == "true") {
-        distributeBrokerage({
-          refereeId: sellOrderData.userId,
-          orderId: sellOrderData._id ? sellOrderData._id : PairId,
-          currencyId: sellerFeeCurrencyId,
-          amount: newCompletedTrade.sellerFee,
+        // this.updateSTV({
+        //   userId: sellOrderData.userId,
+        //   amount: Number(execPrice) * Number(execQuantity),
+        //   currencyId: sellOrderData.secondCurrencyId,
+        // });
+
+        saveAdminprofit({
+          userId: newCompletedTrade.sellerId,
+          ordertype: newCompletedTrade.sellOrderType,
+          pair: `${baseSymbol}/${quoteSymbol}`,
+          fee: newCompletedTrade.sellerFee,
+          coin: quoteSymbol,
         });
       }
 
-      updateSTV({
-        userId: sellOrderData.userId,
-        amount: execPrice * execQuantity,
-        currencyId: sellOrderData.secondCurrencyId,
-      });
+      // In-memory history
+      if (PairId && uniqueId) {
+        await this.redis.hsetField(`tradeHistory_${PairId}`, uniqueId, payload);
+      }
 
-      saveAdminprofit({
-        userId: newCompletedTrade.sellUserId,
-        ordertype: newCompletedTrade.sellOrderType,
-        pair:
-          newCompletedTrade.firstCurrency +
-          "/" +
-          newCompletedTrade.secondCurrency,
-        fee: newCompletedTrade.sellerFee,
-        coin: newCompletedTrade.secondCurrency,
-      });
-    }
-
-    await hset("tradeHistory_" + PairId, uniqueId, data);
-    // await hset(
-    //   "referralCommisonAdd",
-    //   newCompletedTrade._id.toString(),
-    //   newCompletedTrade
-    // );
-    setDepthHist(
-      {
-        PairId,
-        tradePrice: execPrice,
-        tradeQty: execQuantity,
-      },
-      Maker
-    );
-    if (buyOrderData.userId) {
-      await getTradeHistorySocket(
-        buyOrderData.userId.toString(),
-        PairId.toString()
+      // Depth + sockets
+      this.setDepthHist(
+        { PairId, tradePrice: execPrice, tradeQty: execQuantity },
+        Maker
       );
+
+      if (buyOrderData?.userId) {
+        await this.sockets.getTradeHistorySocket?.(
+          String(buyOrderData.userId),
+          String(PairId)
+        );
+      }
+      if (sellOrderData?.userId) {
+        await this.sockets.getTradeHistorySocket?.(
+          String(sellOrderData.userId),
+          String(PairId)
+        );
+      }
+
+      this.sockets.recentTradeSocket?.(PairId);
+
+      // Update pair market price
+      if (PairId) {
+        await this.pairRepo
+          .update(
+            { _id: PairId },
+            { marketPrice: Number(execPrice) },
+            { upsert: true }
+          )
+          .exec();
+      }
+
+      this.sockets.marketPriceSocket?.(PairId);
+      return true;
+    } catch (err) {
+      console.log("newTradeHistory error:", err);
+      return false;
     }
-
-    if (sellOrderData.userId) {
-      await getTradeHistorySocket(
-        sellOrderData.userId.toString(),
-        PairId.toString()
-      );
-    }
-
-    recentTradeSocket(PairId);
-
-    let getDoc = await hget("spotPairdata", PairId.toString());
-
-    getDoc = JSON.parse(getDoc);
-
-    if (getDoc) {
-      getDoc["prevMarkPrice"] = getDoc.markPrice;
-      getDoc.markPrice = execPrice;
-      hset("spotPairdata", PairId.toString(), getDoc);
-      SpotPair.updateOne(
-        { _id: PairId },
-        { markPrice: execPrice, prevMarkPrice: getDoc.markPrice },
-        { upsert: true }
-      ).exec();
-    }
-    marketPriceSocket(PairId);
-    return true;
-  } catch (err) {
-    console.log("newTradeHistorynewTradeHistoryERRRRRRRRR", err);
   }
-};
 
-export const createTradeHistory = async (order) => {
-  let checkOrder = order;
-  checkOrder.status = "cancel";
-  let currencyId =
-    checkOrder.buyorsell == "buy"
-      ? checkOrder.secondCurrencyId
-      : checkOrder.firstCurrencyId;
-  let orderValue =
-    checkOrder.buyorsell == "buy"
-      ? checkOrder.price * checkOrder.quantity
-      : checkOrder.quantity;
-  let marketValue =
-    checkOrder.orderType == "market" && checkOrder.buyorsell == "buy"
-      ? checkOrder.orderValue
-      : checkOrder.amount;
-  let retriveValue = checkOrder.orderType == "limit" ? orderValue : marketValue;
-  retriveValue = parseFloat(retriveValue);
+  // cancel flow equivalent
+  async createTradeHistory(order) {
+    const checkOrder = { ...order, status: "cancel" };
 
-  if (checkOrder.liquidityType == "off")
-    if (checkOrder.orderType != "market") {
-      editOrderBook({
+    const currencyId =
+      checkOrder.buyorsell === "buy"
+        ? checkOrder.secondCurrencyId
+        : checkOrder.firstCurrencyId;
+
+    const orderValue =
+      checkOrder.buyorsell === "buy"
+        ? Number(checkOrder.price) * Number(checkOrder.quantity)
+        : Number(checkOrder.quantity);
+
+    const marketValue =
+      checkOrder.orderType === "market" && checkOrder.buyorsell === "buy"
+        ? Number(checkOrder.orderValue)
+        : Number(checkOrder.amount);
+
+    let retrieveValue =
+      checkOrder.orderType === "limit" ? orderValue : marketValue;
+    retrieveValue = parseFloat(retrieveValue);
+
+    if (
+      checkOrder.liquidityType === "off" &&
+      checkOrder.orderType !== "market"
+    ) {
+      this.editOrderBook({
         buyorsell: checkOrder.buyorsell,
         price: checkOrder.price,
         minusQuantity: checkOrder.quantity,
@@ -318,26 +337,33 @@ export const createTradeHistory = async (order) => {
         firstFloatDigit: checkOrder.firstFloatDigit,
       });
     }
-  let userWallet = await hincbyfloat(
-    "walletbalance_spot",
-    checkOrder.userId + "_" + currencyId,
-    retriveValue
-  );
-  await hset("orderHistory_" + checkOrder.userId, checkOrder._id, checkOrder);
 
-  let beforeBalanmce = userWallet - parseFloat(retriveValue);
-  passbook({
-    userId: checkOrder.userId,
-    coin:
-      checkOrder.buyorsell == "buy"
-        ? checkOrder.secondCurrency
-        : checkOrder.firstCurrency,
-    currencyId: currencyId,
-    tableId: checkOrder._id,
-    beforeBalance: beforeBalanmce.toFixed(8),
-    afterBalance: userWallet,
-    amount: retriveValue,
-    type: "order_Cancel",
-    category: "credit",
-  });
-};
+    const userWallet = await this.redis.hicByFloat(
+      "walletbalance_spot",
+      `${checkOrder.userId}_${currencyId}`,
+      retrieveValue
+    );
+
+    await this.redis.hsetField(
+      `orderHistory_${checkOrder.userId}`,
+      checkOrder._id,
+      checkOrder
+    );
+
+    const beforeBalance = Number(userWallet) - Number(retrieveValue);
+    this.passbook({
+      userId: checkOrder.userId,
+      coin:
+        checkOrder.buyorsell === "buy"
+          ? checkOrder.secondCurrency
+          : checkOrder.firstCurrency,
+      currencyId: currencyId,
+      tableId: checkOrder._id,
+      beforeBalance: Number(beforeBalance).toFixed(8),
+      afterBalance: userWallet,
+      amount: retrieveValue,
+      type: "order_Cancel",
+      category: "credit",
+    });
+  }
+}

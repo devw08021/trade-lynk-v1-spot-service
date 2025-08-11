@@ -1,25 +1,31 @@
-import { hget, hset } from '../../config/redis.js'
-import { PairModel } from '../../models/schema/index.js'
-import { getRepository } from '../../models/repositoryFactory.js'
-import { isEmpty } from 'lodash'
-import { replacePair } from '../../utils/index.js'
-import { socketEmitOne } from '../../config/socketIO.js'
-import { binanceApiNode } from '../../config/binance.js'
+import { hget, hset } from "@/config/redis.js";
+import { PairModel } from "@/models/schema/index.js";
+import { getRepository } from "@/models/repositoryFactory.js";
+import { isEmpty } from "lodash";
+import { replacePair } from "@/utils/index.js";
+import { socketEmitOne } from "@/config/socketIO.js";
+import { binanceApiNode } from "@/config/binance.js";
 
-const pairRepo = getRepository(PairModel)
-let partialDepth, markDepth, RecentDepth;
+class SpotWSController {
+  constructor() {
+    this.pairRepo = getRepository(PairModel);
+    this.partialDepth = null;
+    this.markDepth = null;
+    this.RecentDepth = null;
+  }
 
-export const spotOrderBookWS = async () => {
+  async spotOrderBookWS() {
     try {
-      console.log(partialDepth, "---partialDepth")
-      if (partialDepth) {
-        partialDepth();
+      console.log(this.partialDepth, "---partialDepth");
+      if (this.partialDepth) {
+        this.partialDepth();
       }
-      let getSpotPair = await pairRepo.aggregate([
+
+      let getSpotPair = await this.pairRepo.aggregate([
         {
-          $match: { botstatus: "off" }
+          $match: { botstatus: "off" },
         },
-        { 
+        {
           $project: {
             _id: 1,
             symbol: {
@@ -44,13 +50,15 @@ export const spotOrderBookWS = async () => {
         },
       ]);
       console.log(getSpotPair, "------77");
-  
+
       if (getSpotPair && getSpotPair.length > 0) {
-        partialDepth = binanceApiNode.ws.partialDepth(
+        this.partialDepth = binanceApiNode.ws.partialDepth(
           getSpotPair,
           async (depth) => {
             if (depth) {
-              let pairData = getSpotPair.find((el) => el.symbol == depth.symbol);
+              let pairData = getSpotPair.find(
+                (el) => el.symbol == depth.symbol
+              );
               if (pairData) {
                 // sell order book
                 let sellOrder = [],
@@ -61,13 +69,12 @@ export const spotOrderBookWS = async () => {
                     quantity: parseFloat(sellItem.quantity),
                     filledQuantity: 0,
                   });
-                  // }
                 }
-  
+
                 sellOrder = sellOrder.sort(
                   (a, b) => parseFloat(a.price) - parseFloat(b.price)
                 );
-  
+
                 if (sellOrder.length > 0) {
                   let sumAmount = 0;
                   for (let i = 0; i < sellOrder.length; i++) {
@@ -80,20 +87,19 @@ export const spotOrderBookWS = async () => {
                   }
                 }
                 sellOrder = sellOrder;
-  
+
                 // buy order book
                 let buyOrder = [],
                   binanceBuyOrder = depth.bids;
-  
+
                 for (let buyItem of binanceBuyOrder) {
                   buyOrder.push({
                     _id: buyItem.price,
                     quantity: parseFloat(buyItem.quantity),
                     filledQuantity: 0,
                   });
-                  // }
                 }
-  
+
                 buyOrder = buyOrder.sort(
                   (a, b) => parseFloat(b._id) - parseFloat(a._id)
                 );
@@ -128,16 +134,16 @@ export const spotOrderBookWS = async () => {
     } catch (err) {
       console.log("Error on websocketcall in binanceHelper ", err);
     }
-  };
-  
-export const spotTickerPriceWS = async () => {
+  }
+
+  async spotTickerPriceWS() {
     try {
-      if (markDepth) {
-        markDepth();
+      if (this.markDepth) {
+        this.markDepth();
       }
-      let getSpotPair = await pairRepo.aggregate([
+      let getSpotPair = await this.pairRepo.aggregate([
         {
-          $match: { botstatus: "off" }
+          $match: { botstatus: "off" },
         },
         {
           $group: {
@@ -190,47 +196,48 @@ export const spotTickerPriceWS = async () => {
         getSpotPair[0].symbol &&
         getSpotPair[0].symbol.length > 0
       ) {
-        markDepth = binanceApiNode.ws.ticker(
+        this.markDepth = binanceApiNode.ws.ticker(
           getSpotPair[0].symbol,
           async (tickerdata) => {
             let pairData = getSpotPair[0].pairData.find(
               (el) => el.symbol == tickerdata.symbol
             );
             if (pairData) {
-              let updateSpotPair = await pairRepo.findOneAndUpdate(
-                {
-                  _id: pairData.pairId,
-                },
-                {
-                  low: tickerdata.low,
-                  high: tickerdata.high,
-                  changePrice: tickerdata.priceChange,
-                  change: tickerdata.priceChangePercent,
-                  firstVolume: tickerdata.volume,
-                  secondVolume: tickerdata.volumeQuote,
-                  last: tickerdata.bestBid,
-                  markPrice: tickerdata.bestBid,
-                  last_ask: tickerdata.bestAsk,
-                  last_bid: tickerdata.bestBid,
-                },
-                {
-                  new: true,
-                  fields: {
-                    last: 1,
-                    markPrice: 1,
-                    low: 1,
-                    high: 1,
-                    firstVolume: 1,
-                    secondVolume: 1,
-                    changePrice: 1,
-                    change: 1,
-                    botstatus: 1,
-                    secondCurrencySymbol: 1,
-                    firstCurrencySymbol: 1
+              let updateSpotPair = await this.pairRepo
+                .findOneAndUpdate(
+                  {
+                    _id: pairData.pairId,
                   },
-                }
-              ).lean();
-              // updateSpotPair = updateSpotPair.toJSON()
+                  {
+                    low: tickerdata.low,
+                    high: tickerdata.high,
+                    changePrice: tickerdata.priceChange,
+                    change: tickerdata.priceChangePercent,
+                    firstVolume: tickerdata.volume,
+                    secondVolume: tickerdata.volumeQuote,
+                    last: tickerdata.bestBid,
+                    markPrice: tickerdata.bestBid,
+                    last_ask: tickerdata.bestAsk,
+                    last_bid: tickerdata.bestBid,
+                  },
+                  {
+                    new: true,
+                    fields: {
+                      last: 1,
+                      markPrice: 1,
+                      low: 1,
+                      high: 1,
+                      firstVolume: 1,
+                      secondVolume: 1,
+                      changePrice: 1,
+                      change: 1,
+                      botstatus: 1,
+                      secondCurrencySymbol: 1,
+                      firstCurrencySymbol: 1,
+                    },
+                  }
+                )
+                .lean();
               let pairDoc = await hget(
                 "spotPairdata",
                 updateSpotPair._id.toString()
@@ -273,64 +280,68 @@ export const spotTickerPriceWS = async () => {
     } catch (err) {
       console.log("Error on ticker binance ", err);
     }
-  };
+  }
 
-export const recentTradeWS = async (pairList) => {
+  async recentTradeWS(pairList) {
     try {
-      if (RecentDepth) {
-        RecentDepth();
+      if (this.RecentDepth) {
+        this.RecentDepth();
       }
       console.log(pairList, "---------1412");
-      let symbolList = lodash.map(pairList, (item) => {
-        return item.firstCurrencySymbol + replacePair(item.secondCurrencySymbol);
-      });
-  
+
+      // use native map to avoid depending on lodash default import
+      let symbolList = pairList.map(
+        (item) =>
+          item.firstCurrencySymbol + replacePair(item.secondCurrencySymbol)
+      );
+
       if (symbolList && symbolList.length > 0) {
-        RecentDepth = binanceApiNode.ws.trades(symbolList, async (trade) => {
-          if (trade) {
-            let pairData = pairList.find(
-              (el) =>
-                el.firstCurrencySymbol + replacePair(el.secondCurrencySymbol) ==
-                trade.symbol
-            );
-            let recentTrade = [
-              {
-                createdAt: new Date(trade.tradeTime),
-                Type: trade.isBuyerMaker ? "buy" : "sell",
-                tradePrice: trade.price,
-                tradeQty: trade.quantity,
-              },
-            ];
-            setDepthBinanceHist(
-              {
-                PairId: pairData._id,
-                tradePrice: trade.price,
-                tradeQty: trade.quantity,
-              },
-              trade.isBuyerMaker ? "buy" : "sell"
-            );
-            let pair =
-              pairData.firstCurrencySymbol + pairData.secondCurrencySymbol;
-            socketEmitOne(
-              "recentTrade",
-              {
-                pairId: pairData._id,
-                data: recentTrade,
-              },
-              pair
-            );
+        this.RecentDepth = binanceApiNode.ws.trades(
+          symbolList,
+          async (trade) => {
+            if (trade) {
+              let pairData = pairList.find(
+                (el) =>
+                  el.firstCurrencySymbol +
+                    replacePair(el.secondCurrencySymbol) ==
+                  trade.symbol
+              );
+              let recentTrade = [
+                {
+                  createdAt: new Date(trade.tradeTime),
+                  Type: trade.isBuyerMaker ? "buy" : "sell",
+                  tradePrice: trade.price,
+                  tradeQty: trade.quantity,
+                },
+              ];
+              setDepthBinanceHist(
+                {
+                  PairId: pairData._id,
+                  tradePrice: trade.price,
+                  tradeQty: trade.quantity,
+                },
+                trade.isBuyerMaker ? "buy" : "sell"
+              );
+              let pair =
+                pairData.firstCurrencySymbol + pairData.secondCurrencySymbol;
+              socketEmitOne(
+                "recentTrade",
+                {
+                  pairId: pairData._id,
+                  data: recentTrade,
+                },
+                pair
+              );
+            }
           }
-        });
+        );
       }
     } catch (err) {
       console.log(err, "Error on recentTradeWS");
     }
-  };
+  }
 
-export const recentTrade = async ({
-    firstCurrencySymbol,
-    secondCurrencySymbol,
-  }) => {
+  async recentTrade({ firstCurrencySymbol, secondCurrencySymbol }) {
     try {
       secondCurrencySymbol = replacePair(secondCurrencySymbol);
       let recentTradeData = await binanceApiNode.trades({
@@ -346,11 +357,20 @@ export const recentTrade = async ({
           tradeQty: el.qty,
         });
       });
-  
+
       return recentTrade;
     } catch (err) {
       console.log("err: ", err);
       console.log("\x1b[31m", "Error on binance trade list");
       return [];
     }
-  };
+  }
+}
+
+export const spotWS = new SpotWSController();
+export default spotWS;
+
+export const spotOrderBookWS = spotWS.spotOrderBookWS.bind(spotWS);
+export const spotTickerPriceWS = spotWS.spotTickerPriceWS.bind(spotWS);
+export const recentTradeWS = spotWS.recentTradeWS.bind(spotWS);
+export const recentTrade = spotWS.recentTrade.bind(spotWS);

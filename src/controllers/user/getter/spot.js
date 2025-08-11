@@ -1,16 +1,22 @@
-import Pair from '@/models/schema/pair';
-import SpotOrder from '@/models/schema/order';
-import TradeHistory from '@/models/schema/trades';
-import isEmpty from '@/lib/isEmpty';
-import { paginationQuery } from '@/utils/general';
-import { socketEmitAll, socketEmitOne } from '@/config/socketIO';
-import { redis } from '@/config/redis.js';
-import mongoose from 'mongoose';
+import Pair from "@/models/schema/pair";
+import { SpotOrder, PairModel } from "@/models/schema";
+import TradeHistory from "@/models/schema/trades";
+import isEmpty from "@/lib/isEmpty";
+import { paginationQuery } from "@/utils/general";
+import { socketEmitAll, socketEmitOne } from "@/config/socketIO";
+import { redis } from "@/config/js";
+import mongoose from "mongoose";
+import { getRepository } from "@/models/repositoryFactory";
+import { hgetAll } from "@/config/redis";
 
 const { Types } = mongoose;
 
 const safeParse = (v) => {
-  try { return JSON.parse(v); } catch { return null; }
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
 };
 
 const parseRedisHash = (obj) => {
@@ -33,52 +39,62 @@ const sortByOrderDateDesc = (arr) =>
   arr.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
 
 class SpotController {
+  constructor() {
+    this.spotOrderRepo = getRepository(SpotOrder);
+    this.pairRepo = getRepository(PairModel);
+  }
 
-  async decryptTradeOrder(c,next) {
+  async decryptTradeOrder(c, next) {
     try {
       const body = await c.req.json();
       const token = decryptObject(body.token);
-      c.set('body', token);
+      c.set("body", token);
       await next();
     } catch (err) {
-      return c.json({ status: false, message: 'Something Wrong' }, 500);
+      return c.json({ status: false, message: "Something Wrong" }, 500);
     }
   }
   // GET /get-trends
   async getTrends(c) {
     try {
       const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
       const data = await TradeHistory.aggregate([
         { $match: { createdAt: { $gte: startOfDay, $lt: endOfDay } } },
-        { $group: { _id: '$pairId', count: { $sum: 1 } } },
+        { $group: { _id: "$pairId", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
       ]);
 
-      const result = Array.isArray(data) ? data.map((d) => d._id.toString()) : [];
+      const result = Array.isArray(data)
+        ? data.map((d) => d._id.toString())
+        : [];
       return c.json({ success: true, result }, 200);
     } catch {
-      return c.json({ success: false, message: 'Something went wrong' }, 500);
+      return c.json({ success: false, message: "Something went wrong" }, 500);
     }
   }
 
   // POST /depth-chart  (TODO: dependencies not present)
   async getDepthData(c) {
-    return c.json({ success: false, message: 'Not implemented' }, 501);
+    return c.json({ success: false, message: "Not implemented" }, 501);
   }
 
   // GET /recent-trade/:pairId
   async getRecentTrade(c) {
     try {
       const { pairId } = c.req.param();
-      const pair = await Pair.findById(pairId).lean();
+      const pair = await this.pairRepo.findById(pairId).lean();
 
       if (!pair) return c.json({ success: false }, 404);
 
       // For local liquidity (previously "bot"), use Redis tradeHistory
-      const tradesObj = await redis.hgetAll(`tradeHistory_${pair._id}`);
+      const tradesObj = await hgetAll(`tradeHistory_${pair._id}`);
       let recent = parseRedisHash(tradesObj);
       recent = recent.sort((a, b) => b.createdAt - a.createdAt).splice(0, 25);
 
@@ -92,7 +108,9 @@ class SpotController {
   async getMarketPrice(c) {
     try {
       const { pairId } = c.req.param();
-      const pair = await Pair.findById(pairId, { marketPrice: 1 }).lean();
+      const pair = await this.pairRepo
+        .findById(pairId, { marketPrice: 1 })
+        .lean();
       if (!pair) return c.json({ success: false }, 404);
       return c.json({ success: true, result: pair.marketPrice }, 200);
     } catch {
@@ -103,10 +121,14 @@ class SpotController {
   // SOCKET helper (kept for parity)
   async getTradeHistorySocket(userId, pairId) {
     try {
-      const raw = await redis.hgetAll(`tradeHistory_${pairId}`);
+      const raw = await hgetAll(`tradeHistory_${pairId}`);
       let tradeDoc = parseRedisHash(raw);
       tradeDoc = tradeDoc
-        .filter((x) => String(x.buyUserId) === String(userId) || String(x.sellUserId) === String(userId))
+        .filter(
+          (x) =>
+            String(x.buyUserId) === String(userId) ||
+            String(x.sellUserId) === String(userId)
+        )
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 10);
 
@@ -118,7 +140,7 @@ class SpotController {
         nextPage: false,
         limit: 10,
       };
-      socketEmitOne('tradeHistory', result, userId);
+      socketEmitOne("tradeHistory", result, userId);
       return true;
     } catch {
       return false;
@@ -128,18 +150,23 @@ class SpotController {
   // GET /trade-history/:pairId (auth)
   async getTradeHistory(c) {
     try {
-      const user = c.get('user');
+      const user = c.get("user");
       const { pairId } = c.req.param();
       const pagination = paginationQuery(c.req.query());
 
-      const raw = await redis.hgetAll(`tradeHistory_${pairId}`);
+      const raw = await hgetAll(`tradeHistory_${pairId}`);
       let tradeDoc = parseRedisHash(raw).filter(
-        (x) => String(x.buyUserId) === String(user.userId) || String(x.sellUserId) === String(user.userId)
+        (x) =>
+          String(x.buyUserId) === String(user.userId) ||
+          String(x.sellUserId) === String(user.userId)
       );
       tradeDoc = tradeDoc.sort((a, b) => b.createdAt - a.createdAt);
 
       const count = tradeDoc.length;
-      tradeDoc = tradeDoc.slice(pagination.skip, pagination.skip + pagination.limit);
+      tradeDoc = tradeDoc.slice(
+        pagination.skip,
+        pagination.skip + pagination.limit
+      );
 
       return c.json(
         {
@@ -162,29 +189,31 @@ class SpotController {
   // GET /open-order/:pairId (auth)
   async getOpenOrder(c) {
     try {
-      const user = c.get('user');
+      const user = c.get("user");
       const { pairId } = c.req.param();
       const pagination = paginationQuery(c.req.query());
 
       const filter = {
         userId: new Types.ObjectId(user.userId),
-        status: { $in: ['open', 'pending', 'conditional'] },
+        status: { $in: ["open", "pending", "conditional"] },
       };
-      if (Types.ObjectId.isValid(pairId)) filter.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        filter.pairId = new Types.ObjectId(pairId);
 
-      const count = await SpotOrder.countDocuments(filter);
-      let data = await SpotOrder.find(filter, {
-        orderDate: 1,
-        firstCurrency: 1,
-        secondCurrency: 1,
-        orderType: 1,
-        buyorsell: 1,
-        price: 1,
-        quantity: 1,
-        filledQuantity: 1,
-        orderValue: 1,
-        pairId: 1,
-      })
+      const count = await this.spotOrderRepo.countDocuments(filter);
+      let data = await this.spotOrderRepo
+        .find(filter, {
+          orderDate: 1,
+          firstCurrency: 1,
+          secondCurrency: 1,
+          orderType: 1,
+          buyorsell: 1,
+          price: 1,
+          quantity: 1,
+          filledQuantity: 1,
+          orderValue: 1,
+          pairId: 1,
+        })
         .sort({ orderDate: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
@@ -192,8 +221,16 @@ class SpotController {
 
       // prioritize requested pairId on top
       data = data.sort((a, b) => {
-        if (String(a.pairId) === String(pairId) && String(b.pairId) !== String(pairId)) return -1;
-        if (String(a.pairId) !== String(pairId) && String(b.pairId) === String(pairId)) return 1;
+        if (
+          String(a.pairId) === String(pairId) &&
+          String(b.pairId) !== String(pairId)
+        )
+          return -1;
+        if (
+          String(a.pairId) !== String(pairId) &&
+          String(b.pairId) === String(pairId)
+        )
+          return 1;
         return new Date(b.orderDate) - new Date(a.orderDate);
       });
 
@@ -218,18 +255,19 @@ class SpotController {
   // GET /filled-order/:pairId (auth)
   async getFilledOrder(c) {
     try {
-      const user = c.get('user');
+      const user = c.get("user");
       const { pairId } = c.req.param();
       const pagination = paginationQuery(c.req.query());
 
       const match = {
         userId: new Types.ObjectId(user.userId),
-        status: 'completed',
+        status: "completed",
       };
-      if (Types.ObjectId.isValid(pairId)) match.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        match.pairId = new Types.ObjectId(pairId);
 
-      const count = await SpotOrder.countDocuments(match);
-      const data = await SpotOrder.aggregate([
+      const count = await this.spotOrderRepo.countDocuments(match);
+      const data = await this.spotOrderRepo.aggregate([
         { $match: match },
         { $sort: { _id: -1 } },
         { $skip: pagination.skip },
@@ -237,7 +275,7 @@ class SpotController {
         {
           $project: {
             orderDate: {
-              $dateToString: { date: '$orderDate', format: '%Y-%m-%d %H:%M' },
+              $dateToString: { date: "$orderDate", format: "%Y-%m-%d %H:%M" },
             },
             firstCurrency: 1,
             secondCurrency: 1,
@@ -272,29 +310,32 @@ class SpotController {
   // GET /order-history/:pairId (auth)
   async getOrderHistory(c) {
     try {
-      const user = c.get('user');
+      const user = c.get("user");
       const { pairId } = c.req.param();
       const pagination = paginationQuery(c.req.query());
 
-      // From Mongo (orders collection acts as order history)
       const matchOpen = {
         userId: new Types.ObjectId(user.userId),
-        status: { $in: ['open', 'pending', 'cancel', 'completed', 'conditional'] },
+        status: {
+          $in: ["open", "pending", "cancel", "completed", "conditional"],
+        },
       };
-      if (Types.ObjectId.isValid(pairId)) matchOpen.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        matchOpen.pairId = new Types.ObjectId(pairId);
 
-      const count = await SpotOrder.countDocuments(matchOpen);
-      const data = await SpotOrder.find(matchOpen, {
-        orderDate: 1,
-        firstCurrency: 1,
-        secondCurrency: 1,
-        orderType: 1,
-        buyorsell: 1,
-        price: 1,
-        quantity: 1,
-        filledQuantity: 1,
-        orderValue: 1,
-      })
+      const count = await this.spotOrderRepo.countDocuments(matchOpen);
+      const data = await this.spotOrderRepo
+        .find(matchOpen, {
+          orderDate: 1,
+          firstCurrency: 1,
+          secondCurrency: 1,
+          orderType: 1,
+          buyorsell: 1,
+          price: 1,
+          quantity: 1,
+          filledQuantity: 1,
+          orderValue: 1,
+        })
         .sort({ orderDate: -1 })
         .skip(pagination.skip)
         .limit(pagination.limit)
@@ -322,33 +363,43 @@ class SpotController {
     try {
       const match = {
         userId: new Types.ObjectId(userId),
-        status: { $in: ['open', 'pending', 'conditional'] },
+        status: { $in: ["open", "pending", "conditional"] },
       };
-      if (Types.ObjectId.isValid(pairId)) match.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        match.pairId = new Types.ObjectId(pairId);
 
-      let data = await SpotOrder.find(match, {
-        orderDate: 1,
-        firstCurrency: 1,
-        secondCurrency: 1,
-        orderType: 1,
-        buyorsell: 1,
-        price: 1,
-        quantity: 1,
-        filledQuantity: 1,
-        orderValue: 1,
-        pairId: 1,
-      })
+      let data = await this.spotOrderRepo
+        .find(match, {
+          orderDate: 1,
+          firstCurrency: 1,
+          secondCurrency: 1,
+          orderType: 1,
+          buyorsell: 1,
+          price: 1,
+          quantity: 1,
+          filledQuantity: 1,
+          orderValue: 1,
+          pairId: 1,
+        })
         .sort({ orderDate: -1 })
         .limit(50)
         .lean();
 
       data = data.sort((a, b) => {
-        if (String(a.pairId) === String(pairId) && String(b.pairId) !== String(pairId)) return -1;
-        if (String(a.pairId) !== String(pairId) && String(b.pairId) === String(pairId)) return 1;
+        if (
+          String(a.pairId) === String(pairId) &&
+          String(b.pairId) !== String(pairId)
+        )
+          return -1;
+        if (
+          String(a.pairId) !== String(pairId) &&
+          String(b.pairId) === String(pairId)
+        )
+          return 1;
         return new Date(b.orderDate) - new Date(a.orderDate);
       });
 
-      socketEmitOne('openOrder', { pairId, data, count: data.length }, userId);
+      socketEmitOne("openOrder", { pairId, data, count: data.length }, userId);
       return true;
     } catch {
       return false;
@@ -359,18 +410,21 @@ class SpotController {
     try {
       const match = {
         userId: new Types.ObjectId(userId),
-        status: 'completed',
+        status: "completed",
       };
-      if (Types.ObjectId.isValid(pairId)) match.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        match.pairId = new Types.ObjectId(pairId);
 
-      const count = await SpotOrder.countDocuments(match);
-      const data = await SpotOrder.aggregate([
+      const count = await this.spotOrderRepo.countDocuments(match);
+      const data = await this.spotOrderRepo.aggregate([
         { $match: match },
         { $sort: { _id: -1 } },
         { $limit: 10 },
         {
           $project: {
-            orderDate: { $dateToString: { date: '$orderDate', format: '%Y-%m-%d %H:%M' } },
+            orderDate: {
+              $dateToString: { date: "$orderDate", format: "%Y-%m-%d %H:%M" },
+            },
             firstCurrency: 1,
             secondCurrency: 1,
             orderType: 1,
@@ -384,8 +438,15 @@ class SpotController {
       ]);
 
       socketEmitOne(
-        'filledOrder',
-        { pairId, count, currentPage: 1, nextPage: count > data.length, limit: 10, data },
+        "filledOrder",
+        {
+          pairId,
+          count,
+          currentPage: 1,
+          nextPage: count > data.length,
+          limit: 10,
+          data,
+        },
         userId
       );
       return true;
@@ -398,29 +459,40 @@ class SpotController {
     try {
       const match = {
         userId: new Types.ObjectId(userId),
-        status: { $in: ['open', 'pending', 'cancel', 'completed', 'conditional'] },
+        status: {
+          $in: ["open", "pending", "cancel", "completed", "conditional"],
+        },
       };
-      if (Types.ObjectId.isValid(pairId)) match.pairId = new Types.ObjectId(pairId);
+      if (Types.ObjectId.isValid(pairId))
+        match.pairId = new Types.ObjectId(pairId);
 
-      const count = await SpotOrder.countDocuments(match);
-      const data = await SpotOrder.find(match, {
-        orderDate: 1,
-        firstCurrency: 1,
-        secondCurrency: 1,
-        orderType: 1,
-        buyorsell: 1,
-        price: 1,
-        quantity: 1,
-        filledQuantity: 1,
-        orderValue: 1,
-      })
+      const count = await this.spotOrderRepo.countDocuments(match);
+      const data = await this.spotOrderRepo
+        .find(match, {
+          orderDate: 1,
+          firstCurrency: 1,
+          secondCurrency: 1,
+          orderType: 1,
+          buyorsell: 1,
+          price: 1,
+          quantity: 1,
+          filledQuantity: 1,
+          orderValue: 1,
+        })
         .sort({ orderDate: -1 })
         .limit(10)
         .lean();
 
       socketEmitOne(
-        'orderHistory',
-        { pairId, data, count, currentPage: 1, nextPage: count > data.length, limit: 10 },
+        "orderHistory",
+        {
+          pairId,
+          data,
+          count,
+          currentPage: 1,
+          nextPage: count > data.length,
+          limit: 10,
+        },
         userId
       );
       return true;
@@ -429,7 +501,7 @@ class SpotController {
     }
   }
 
-  async orderBookData ({ pairId }) {
+  async orderBookData({ pairId }) {
     try {
       let spotPairData = await FetchpairData(pairId);
       let decimalval = 0;
@@ -438,13 +510,19 @@ class SpotController {
         return;
       }
       let buyOrders = await hgetall("buyOrders" + pairId);
-  
+
       let sellOrders = await hgetall("sellOrders" + pairId);
       ordeBookData.buyOrders = buyOrders
-        ? Object.entries(buyOrders).map((e) => ({ price: e[0], quantity: e[1] }))
+        ? Object.entries(buyOrders).map((e) => ({
+            price: e[0],
+            quantity: e[1],
+          }))
         : [];
       ordeBookData.sellOrders = sellOrders
-        ? Object.entries(sellOrders).map((e) => ({ price: e[0], quantity: e[1] }))
+        ? Object.entries(sellOrders).map((e) => ({
+            price: e[0],
+            quantity: e[1],
+          }))
         : [];
       // let ordeBookData = await OrderBook.findOne({ pairId: pairId });
       if (ordeBookData.buyOrders || ordeBookData.sellOrders) {
@@ -476,7 +554,7 @@ class SpotController {
             }
           }
         }
-  
+
         if (sellOrderData.length > 0) {
           let sumamount = 0;
           for (let i = 0; i < sellOrderData.length; i++) {
@@ -521,7 +599,116 @@ class SpotController {
         sellOrder: [],
       };
     }
-  };
+  }
+
+  async getOrderBookSocket(pairId) {
+    try {
+      let result = await orderBookData({
+        pairId: pairId,
+      });
+      if (result) {
+        let pairDoc = await SpotPair.findOne({ _id: pairId });
+        result["pairId"] = pairId;
+        result["timestamp"] = Date.now();
+        result["symbol"] = pairDoc?.tikerRoot;
+        socketEmitOne("orderBook", result, pairDoc?.tikerRoot);
+      }
+
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+  async getTickerList(c) {
+    try {
+      let spotDoc = await SpotPair.find({ status: "active" }).lean();
+      const result = {};
+      spotDoc.forEach((item) => {
+        result[`${item.firstCurrencySymbol}_${item.secondCurrencySymbol}`] = {
+          last_price: item.markPrice,
+          quote_volume: item.firstVolume,
+          base_volume: item.secondVolume,
+        };
+      });
+      return c.send(result);
+    } catch (err) {
+      return c.json({ success: false, message: "Error occured" }, 500);
+    }
+  }
+
+  async getOrderBook(c) {
+    try {
+      let bitArr = [];
+      let askArr = [];
+      let result = {};
+      const { ticker_root } = c.req.query;
+      if (req.query.ticker_root) {
+        let orderBoookDoc = orderBookArr.find(
+          (item) => item.symbol == ticker_root
+        );
+        if (orderBoookDoc) {
+          if (orderBoookDoc?.buyOrder?.length > 0) {
+            for (let item of orderBoookDoc.buyOrder) {
+              bitArr.push([item._id, item.quantity]);
+            }
+          }
+          if (orderBoookDoc?.sellOrder?.length > 0) {
+            for (let item of orderBoookDoc.sellOrder) {
+              askArr.push([item._id, item.quantity]);
+            }
+          }
+          result["timestamp"] = orderBoookDoc.timestamp;
+          result["bids"] = bitArr;
+          result["asks"] = askArr;
+          return c.send(result);
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "Error occured" });
+      }
+    } catch (err) {
+      return c.json({ success: false, message: "Error occured" }, 500);
+    }
+  }
+
+  async getrecentTradeByTicker(c) {
+    try {
+      const query = c.req.query;
+      let tradeDoc = await TradeHistory.aggregate([
+        { $match: { pairName: query.ticker_root } },
+        {
+          $addFields: {
+            timestamp: {
+              $divide: [
+                { $subtract: ["$createdAt", new Date("1970-01-01")] },
+                1000,
+              ],
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            trade_id: "$_id",
+            price: "$tradePrice",
+            timestamp: 1,
+            type: {
+              $cond: [{ $eq: ["$isMaker", "buy"] }, "sell", "buy"],
+            },
+            base_volume: "$tradeQty",
+            quote_volume: { $multiply: ["$tradePrice", "$tradeQty"] },
+          },
+        },
+        {
+          $limit: 10,
+        },
+      ]);
+      return c.send(tradeDoc);
+    } catch (err) {
+      return c.json({ success: false }, 500);
+    }
+  }
 }
 
 export default SpotController;
